@@ -1,5 +1,7 @@
 # 🌅 Raspberry Pi Dashboard
 
+![Dashboard Screenshot](image.png)
+
 A beautiful, fullscreen dashboard application built with Tauri that displays the time, date, weather, and stunning contextual background images from Unsplash. Perfect for Raspberry Pi displays, smart mirrors, or any always-on display setup.
 
 ## ✨ Features

@@ -197,10 +197,18 @@ function getHoliday() {
 function getTimeOfDay() {
     const now = new Date();
     const hour = now.getHours();
-    
-    if (hour >= 5 && hour < 8) return 'dawn';
-    if (hour >= 8 && hour < 17) return 'day';
-    if (hour >= 17 && hour < 20) return 'dusk';
+    let dawnStart = 5, dawnEnd = 8, duskStart = 17, duskEnd = 20;
+    if (currentWeather && currentWeather.sunrise && currentWeather.sunset) {
+        const sunrise = new Date(currentWeather.sunrise);
+        const sunset = new Date(currentWeather.sunset);
+        dawnStart = sunrise.getHours() - 1;
+        dawnEnd = sunrise.getHours() + 2;
+        duskStart = sunset.getHours() - 1;
+        duskEnd = sunset.getHours() + 2;
+    }
+    if (hour >= dawnStart && hour < dawnEnd) return 'dawn';
+    if (hour >= dawnEnd && hour < duskStart) return 'day';
+    if (hour >= duskStart && hour < duskEnd) return 'dusk';
     return 'night';
 }
 
