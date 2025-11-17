@@ -21,6 +21,8 @@
 	position: absolute;
 	top: 0;
 	left: 0;
+	display: grid;
+	place-items: center;
 }
 
 .currentTimeDate{
@@ -31,6 +33,8 @@
 	position: absolute;
 	top: 0;
 	right: 0;
+	display: grid;
+	place-items: center;
 }
 
 .temp{
@@ -39,7 +43,6 @@
 	display: block;
 	font-weight: 300;
 	color: rgb(255, 255, 255);
-	padding: 2vmin 0 0;
 }
 
 .location{
@@ -57,7 +60,6 @@
 	display: block;
 	font-weight: 700;
 	color: rgb(41, 41, 41);
-	padding: 3vmin 0 1vmin;
 }
 
 .date{
@@ -66,8 +68,7 @@
 	font-weight: 700;
 	font-size: 3vmin;
 	display: block;
-	padding: 0 1vmin;
-  line-height: 0.9;
+    line-height: 0.9;
 }
 
 #photo-credit {
