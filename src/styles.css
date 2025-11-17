@@ -1,0 +1,175 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:300,400,700);
+
+#card_wrapper{
+  position: fixed;
+  top: 1vmin;
+  right: 1vmin;
+  opacity: 0.9;
+}
+
+.cards{
+	width: 44vmin;
+	height: 20vmin;
+	font-family: 'Open Sans';
+	position: relative;
+}
+
+.currentTemp{
+	width: 22vmin;
+	height: 20vmin;
+	background: rgb(41, 41, 41);
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.currentTimeDate{
+	width: 22vmin;
+	height: 20vmin;
+	background: rgb(237, 237, 237);
+	margin: 0;
+	position: absolute;
+	top: 0;
+	right: 0;
+}
+
+.temp{
+	font-size: 8vmin;
+	text-align: center;
+	display: block;
+	font-weight: 300;
+	color: rgb(255, 255, 255);
+	padding: 2vmin 0 0;
+}
+
+.location{
+	color: rgb(255, 255, 255);
+	text-align: center;
+	text-transform: uppercase;
+	font-weight: 700;
+	font-size: 3vmin;
+	display: block;
+}
+
+.time{
+	font-size: 5.5vmin;
+	text-align: center;
+	display: block;
+	font-weight: 700;
+	color: rgb(41, 41, 41);
+	padding: 3vmin 0 1vmin;
+}
+
+.date{
+	color: rgb(41, 41, 41);
+	text-align: center;
+	font-weight: 700;
+	font-size: 3vmin;
+	display: block;
+	padding: 0 1vmin;
+  line-height: 0.9;
+}
+
+#photo-credit {
+	position: fixed;
+	bottom: 10px;
+	right: 10px;
+	color: rgba(255, 255, 255, 0.7);
+	font-size: 12px;
+	font-family: 'Open Sans', sans-serif;
+	font-weight: 400;
+	text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+#photo-credit a {
+	color: rgba(255, 255, 255, 0.9);
+	text-decoration: underline;
+	font-family: 'Open Sans', sans-serif;
+}
+
+/* Weather details cards - bottom left */
+#weather_details_wrapper {
+	position: fixed;
+	bottom: 1vmin;
+	left: 1vmin;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 1vmin;
+	opacity: 0.9;
+}
+
+.weather-card {
+	font-family: 'Open Sans';
+	background: rgb(41, 41, 41);
+	padding: 1.2vmin;
+	display: flex;
+	align-items: center;
+	gap: 1vmin;
+}
+
+.small-card {
+	min-width: 14vmin;
+}
+
+.sun-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.8vmin;
+	align-items: flex-start;
+	min-width: 14vmin;
+}
+
+.sun-item {
+	display: flex;
+	align-items: center;
+	gap: 1vmin;
+}
+
+.cpu-card {
+	justify-content: center;
+	background: rgba(255, 255, 255, 0.1);
+	gap: 0.8vmin;
+	min-width: 14vmin;
+}
+
+.weather-icon {
+	width: 3vmin;
+	height: 3vmin;
+	filter: brightness(0) invert(1);
+	opacity: 0.9;
+	flex-shrink: 0;
+}
+
+.weather-data {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1vmin;
+}
+
+.weather-label {
+	font-size: 1.6vmin;
+	color: rgba(255, 255, 255, 0.7);
+	font-weight: 400;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.weather-value {
+	font-size: 2.2vmin;
+	color: rgb(255, 255, 255);
+	font-weight: 700;
+}
+
+.cpu-label {
+	font-size: 1.6vmin;
+	color: rgba(255, 255, 255, 0.7);
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.cpu-value {
+	font-size: 2vmin;
+	color: rgb(255, 255, 255);
+	font-weight: 700;
+}

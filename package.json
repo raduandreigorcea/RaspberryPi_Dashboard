@@ -1,0 +1,14 @@
+{
+  "name": "raspberrypidashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "sass": "sass src/styles.scss src/styles.css",
+    "sass:watch": "sass --watch src/styles.scss:src/styles.css"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
