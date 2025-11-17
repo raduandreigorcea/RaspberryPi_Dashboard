@@ -396,3 +396,7 @@ async function fetchUnsplashPhoto(forceRefresh = false) {
 
 // Fetch Unsplash photo on load (use cache if valid)
 fetchUnsplashPhoto();
+
+document.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+});

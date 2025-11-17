@@ -27,39 +27,39 @@
   </aside>
 
   <div id="weather_details_wrapper">
-    <!-- Humidity Card -->
-    <article class="weather-card small-card">
-      <img src="assets/droplet.svg" alt="Humidity" class="weather-icon">
-      <div class="weather-data">
-        <span class="weather-label">Humidity</span>
-        <span class="weather-value" id="humidity">--%</span>
+    <!-- Humidity + Wind Card -->
+    <article class="weather-card sun-card">
+      <div class="sun-item">
+        <img src="assets/droplet.svg" alt="Humidity" class="weather-icon">
+        <div class="weather-data">
+          <span class="weather-label">Humidity</span>
+          <span class="weather-value" id="humidity">--%</span>
+        </div>
+      </div>
+      <div class="sun-item">
+        <img src="assets/wind.svg" alt="Wind" class="weather-icon">
+        <div class="weather-data">
+          <span class="weather-label">Wind</span>
+          <span class="weather-value" id="wind">-- km/h</span>
+        </div>
       </div>
     </article>
 
-    <!-- Wind Card -->
-    <article class="weather-card small-card">
-      <img src="assets/wind.svg" alt="Wind" class="weather-icon">
-      <div class="weather-data">
-        <span class="weather-label">Wind</span>
-        <span class="weather-value" id="wind">-- km/h</span>
+    <!-- Sky + Clouds Card -->
+    <article class="weather-card sun-card">
+      <div class="sun-item">
+        <img src="assets/umbrella.svg" alt="Sky" class="weather-icon" id="precip-icon">
+        <div class="weather-data">
+          <span class="weather-label" id="precip-label">Sky</span>
+          <span class="weather-value" id="precipitation">Clear</span>
+        </div>
       </div>
-    </article>
-
-    <!-- Precipitation Card -->
-    <article class="weather-card small-card" id="precip-card">
-      <img src="assets/umbrella.svg" alt="Precipitation" class="weather-icon" id="precip-icon">
-      <div class="weather-data">
-        <span class="weather-label" id="precip-label">Precip</span>
-        <span class="weather-value" id="precipitation">Clear</span>
-      </div>
-    </article>
-
-    <!-- Cloudiness Card -->
-    <article class="weather-card small-card">
-      <img src="assets/cloudy.svg" alt="Clouds" class="weather-icon">
-      <div class="weather-data">
-        <span class="weather-label">Clouds</span>
-        <span class="weather-value" id="cloudiness">--%</span>
+      <div class="sun-item">
+        <img src="assets/cloudy.svg" alt="Clouds" class="weather-icon">
+        <div class="weather-data">
+          <span class="weather-label">Clouds</span>
+          <span class="weather-value" id="cloudiness">--%</span>
+        </div>
       </div>
     </article>
 
