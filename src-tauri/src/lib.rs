@@ -27,17 +27,24 @@ pub struct UnsplashPhoto {
     pub url: String,
     pub author: String,
     pub author_url: String,
+    pub download_location: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct UnsplashApiResponse {
     urls: UnsplashUrls,
     user: UnsplashUser,
+    links: UnsplashPhotoLinks,
+}
+
+#[derive(Debug, Deserialize)]
+struct UnsplashPhotoLinks {
+    download_location: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct UnsplashUrls {
-    raw: String,
+    regular: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -97,13 +104,30 @@ async fn get_unsplash_photo(width: u32, height: u32, query: String) -> Result<Un
         .map_err(|e| format!("Failed to parse photo data: {}", e))?;
     
     // Build the final URL with the exact dimensions
-    let photo_url = format!("{}?w={}&h={}&fit=crop", data.urls.raw, width, height);
+    let photo_url = format!("{}?w={}&h={}&fit=crop&q=85", data.urls.regular, width, height);
     
     Ok(UnsplashPhoto {
         url: photo_url,
         author: data.user.name,
         author_url: data.user.links.html,
+        download_location: data.links.download_location,
     })
+}
+
+#[tauri::command]
+async fn trigger_unsplash_download(download_url: String) -> Result<(), String> {
+    let access_key = std::env::var("UNSPLASH_ACCESS_KEY")
+        .unwrap_or_else(|_| "YOUR_UNSPLASH_ACCESS_KEY".to_string());
+    
+    let client = reqwest::Client::new();
+    let _response = client
+        .get(&download_url)
+        .header("Authorization", format!("Client-ID {}", access_key))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to trigger download: {}", e))?;
+    
+    Ok(())
 }
 
 #[tauri::command]
@@ -136,7 +160,7 @@ pub fn run() {
     
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, get_location, get_unsplash_photo, get_cpu_temp])
+        .invoke_handler(tauri::generate_handler![greet, get_location, get_unsplash_photo, get_cpu_temp, trigger_unsplash_download])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

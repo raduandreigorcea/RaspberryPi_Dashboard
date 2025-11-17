@@ -155,6 +155,11 @@ setInterval(updateCPUTemp, 10 * 1000);
 // Update weather every 15 minutes (900000 ms)
 setInterval(updateWeather, 15 * 60 * 1000);
 
+// Automatically refresh Unsplash photo every 30 minutes
+setInterval(() => {
+    fetchUnsplashPhoto(true); // force refresh
+}, 30 * 60 * 1000); // 30 minutes
+
 // Determine the season based on date
 function getSeason() {
     const now = new Date();
@@ -315,7 +320,7 @@ function cachePhoto(photo, query) {
 }
 
 // Display photo (from cache or fresh)
-function displayPhoto(photo) {
+async function displayPhoto(photo) {
     // Set the background image
     document.body.style.backgroundImage = `url('${photo.url}')`;
     document.body.style.backgroundSize = 'cover';
@@ -328,7 +333,19 @@ function displayPhoto(photo) {
         creditElement.id = 'photo-credit';
         document.body.appendChild(creditElement);
     }
-    creditElement.innerHTML = `Photo by <a href="${photo.author_url}" target="_blank">${photo.author}</a> on Unsplash`;
+    creditElement.innerHTML = `Photo by <a href="${photo.author_url}" target="_blank">${photo.author}</a> on <a href="https://unsplash.com" target="_blank">Unsplash</a>`;
+    
+    // Trigger Unsplash download endpoint for API compliance
+    if (photo.download_location) {
+        try {
+            await window.__TAURI__.core.invoke('trigger_unsplash_download', { 
+                downloadUrl: photo.download_location 
+            });
+            console.log('Unsplash download triggered');
+        } catch (error) {
+            console.error('Failed to trigger download:', error);
+        }
+    }
 }
 
 // Fetch and display Unsplash background photo
@@ -339,7 +356,7 @@ async function fetchUnsplashPhoto(forceRefresh = false) {
             const cachedPhoto = getCachedPhoto();
             if (cachedPhoto) {
                 console.log('Using cached photo');
-                displayPhoto(cachedPhoto);
+                await displayPhoto(cachedPhoto);
                 return;
             }
         }
@@ -363,7 +380,7 @@ async function fetchUnsplashPhoto(forceRefresh = false) {
         cachePhoto(photo, query);
         
         // Display the photo
-        displayPhoto(photo);
+        await displayPhoto(photo);
         
     } catch (error) {
         console.error('Failed to fetch Unsplash photo:', error);
@@ -372,13 +389,10 @@ async function fetchUnsplashPhoto(forceRefresh = false) {
         const cachedPhoto = getCachedPhoto();
         if (cachedPhoto) {
             console.log('Using cached photo as fallback');
-            displayPhoto(cachedPhoto);
+            await displayPhoto(cachedPhoto);
         }
     }
 }
 
 // Fetch Unsplash photo on load (use cache if valid)
 fetchUnsplashPhoto();
-
-// Refresh photo every 30 minutes (force new API call)
-setInterval(() => fetchUnsplashPhoto(true), 30 * 60 * 1000);
