@@ -10,10 +10,10 @@ A beautiful, fullscreen dashboard application built with Tauri that displays the
 - **Seasonal Awareness**: Automatically adjusts photos based on spring, summer, autumn, or winter
 - **Holiday Themes**: Special imagery for Christmas, New Year, Halloween, and Easter
 - **Time-Based Moods**: 
-  - Dawn (5am-8am): Moody, atmospheric sunrise photos
-  - Day (8am-5pm): Bright, vibrant landscapes
-  - Dusk (5pm-8pm): Golden hour, sunset vibes
-  - Night (8pm-5am): Dark, moody nightscapes
+  - Dawn : Moody, atmospheric sunrise photos
+  - Day : Bright, vibrant landscapes
+  - Dusk : Golden hour, sunset vibes
+  - Night : Dark, moody nightscapes
 - **Weather Integration**: Shows cozy rain or snow photos when it's raining or snowing
 - **Powered by Unsplash**: High-quality, curated photography
 
