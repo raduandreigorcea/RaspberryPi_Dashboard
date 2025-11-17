@@ -1,4 +1,4 @@
-# 🌅 Raspberry Pi Dashboard
+# Raspberry Pi Dashboard
 
 ![Dashboard Screenshot](image.png)
 
@@ -6,7 +6,7 @@ A beautiful, fullscreen dashboard application built with Tauri that displays the
 
 ## ✨ Features
 
-### 🖼️ **Smart Background Images**
+###  **Smart Background Images**
 - **Seasonal Awareness**: Automatically adjusts photos based on spring, summer, autumn, or winter
 - **Holiday Themes**: Special imagery for Christmas, New Year, Halloween, and Easter
 - **Time-Based Moods**: 
@@ -17,13 +17,13 @@ A beautiful, fullscreen dashboard application built with Tauri that displays the
 - **Weather Integration**: Shows cozy rain or snow photos when it's raining or snowing
 - **Powered by Unsplash**: High-quality, curated photography
 
-### 🌤️ **Real-Time Information**
+###  **Real-Time Information**
 - **Live Clock**: Updates every second with HH:MM format
 - **Current Date**: Clean, readable date display
 - **Local Weather**: Real-time temperature in Celsius
 - **Auto-Location**: Automatically detects your location via IP
 
-### 🚀 **Performance**
+###  **Performance**
 - **Built with Tauri**: Native performance with minimal resource usage
 - **Rust Backend**: Lightning-fast API calls and data processing
 - **Fullscreen Mode**: Immersive, distraction-free display
@@ -38,33 +38,6 @@ A beautiful, fullscreen dashboard application built with Tauri that displays the
   - [Unsplash API](https://unsplash.com/developers): Background images
   - [Open-Meteo](https://open-meteo.com/): Weather data
   - [IP-API](http://ip-api.com/): Geolocation
-
-## 📸 Screenshots
-
-The dashboard displays:
-- Large, clear time display
-- Current date
-- Local weather with temperature
-- Your city/location
-- Beautiful, context-aware background images
-- Photo credit to Unsplash photographers
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to:
-- Report bugs
-- Suggest new features
-- Submit pull requests
-
-## 📄 License
-
-This project is open source and available under the MIT License.
-
-## 🙏 Credits
-
-- Background images from [Unsplash](https://unsplash.com/)
-- Weather data from [Open-Meteo](https://open-meteo.com/)
-- Built with [Tauri](https://tauri.app/)
 
 ---
 
