@@ -1,5 +1,10 @@
 @import url(https://fonts.googleapis.com/css?family=Open+Sans:300,400,700);
 
+body {
+	min-block-size: 100vh;
+	margin: 0;
+}
+
 #card_wrapper{
   position: fixed;
   top: 1vmin;
@@ -129,7 +134,7 @@
 
 .cpu-card {
 	justify-content: center;
-	background: rgba(255, 255, 255, 0.1);
+	background: rgb(41, 41, 41);
 	gap: 0.8vmin;
 	min-width: 14vmin;
 }
@@ -164,7 +169,7 @@
 
 .cpu-label {
 	font-size: 1.6vmin;
-	color: rgba(255, 255, 255, 0.7);
+	color: rgb(255, 255, 255);
 	font-weight: 700;
 	text-transform: uppercase;
 }

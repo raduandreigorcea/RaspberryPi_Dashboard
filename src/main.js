@@ -39,7 +39,7 @@ async function fetchWeather(latitude, longitude) {
         } else {
             // Show "Clear" when there's no precipitation - keep umbrella icon
             precipIcon.src = 'assets/umbrella.svg';
-            precipLabel.textContent = 'Sky';
+            precipLabel.textContent = 'Precip';
             precipValue.textContent = 'Clear';
         }
 
@@ -120,7 +120,9 @@ async function updateCPUTemp() {
             // Hide CPU temp on non-Linux systems
             cpuCard.style.display = 'none';
         }
-    } catch (error) {
+    } 
+    
+    catch (error) {
         console.error('Failed to fetch CPU temp:', error);
         const cpuCard = document.querySelector('.cpu-card');
         cpuCard.style.display = 'none';
