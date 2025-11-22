@@ -104,6 +104,9 @@ async function updateWeather() {
     if (weather) {
         console.log('Weather retrieved:', weather);
         currentWeather = weather;
+        
+        // Re-check photo context after weather update (in case sunrise/sunset times affect time of day)
+        checkPhotoContext();
     }
 }
 
@@ -162,6 +165,11 @@ setInterval(() => {
     fetchUnsplashPhoto(true); // force refresh
 }, 30 * 60 * 1000); // 30 minutes
 
+// Check photo context every 5 minutes (in case time of day changes)
+setInterval(() => {
+    checkPhotoContext();
+}, 5 * 60 * 1000); // 5 minutes
+
 // Determine the season based on date
 function getSeason() {
     const now = new Date();
@@ -195,39 +203,38 @@ function getHoliday() {
     return null;
 }
 
-// Determine time of day context
+// Determine time of day context based on actual sunrise/sunset
 function getTimeOfDay() {
-    const now = new Date();
-    const hour = now.getHours();
+    if (!currentWeather || !currentWeather.sunrise || !currentWeather.sunset) {
+        // Fallback if no weather data yet
+        const now = new Date();
+        const hour = now.getHours();
+        
+        if (hour >= 5 && hour < 8) return 'dawn';
+        if (hour >= 8 && hour < 17) return 'day';
+        if (hour >= 17 && hour < 20) return 'dusk';
+        return 'night';
+    }
     
-    if (hour >= 5 && hour < 8) return 'dawn';
-    if (hour >= 8 && hour < 17) return 'day';
-    if (hour >= 17 && hour < 20) return 'dusk';
+    const now = new Date();
+    const currentTime = now.getTime();
+    const sunrise = new Date(currentWeather.sunrise).getTime();
+    const sunset = new Date(currentWeather.sunset).getTime();
+    
+    // Calculate golden hour windows (1 hour before/after sunrise/sunset)
+    const oneHour = 60 * 60 * 1000;
+    const dawnStart = sunrise - oneHour;
+    const dawnEnd = sunrise + oneHour;
+    const duskStart = sunset - oneHour;
+    const duskEnd = sunset + oneHour;
+    
+    if (currentTime >= dawnStart && currentTime <= dawnEnd) return 'dawn';
+    if (currentTime >= duskStart && currentTime <= duskEnd) return 'dusk';
+    if (currentTime > dawnEnd && currentTime < duskStart) return 'day';
     return 'night';
 }
 
-// Random theme generators for more variety
-function getRandomTheme() {
-    const themes = [
-        'architecture', 'cityscape', 'travel', 'nature', 'landscape',
-        'mountains', 'ocean', 'beach', 'forest', 'desert', 'lake',
-        'urban', 'street', 'minimalist', 'aerial', 'abstract',
-        'coffee shop', 'library', 'garden', 'pathway', 'bridge',
-        'skyline', 'countryside', 'village', 'alley', 'rooftop'
-    ];
-    return themes[Math.floor(Math.random() * themes.length)];
-}
-
-function getRandomMood() {
-    const moods = [
-        'cinematic', 'atmospheric', 'serene', 'peaceful', 'vibrant',
-        'moody', 'dramatic', 'ethereal', 'dreamy', 'cozy',
-        'mystical', 'tranquil', 'nostalgic', 'romantic', 'calm'
-    ];
-    return moods[Math.floor(Math.random() * moods.length)];
-}
-
-// Build contextual search query for Unsplash
+// Build contextual search query for Unsplash - SIMPLIFIED
 function buildPhotoQuery() {
     const queries = [];
     
@@ -235,50 +242,25 @@ function buildPhotoQuery() {
     const holiday = getHoliday();
     if (holiday) {
         queries.push(holiday);
-        queries.push('aesthetic');
     }
     
-    // Priority 2: Weather conditions
-    if (currentWeather) {
-        if (currentWeather.rain > 0 || currentWeather.snowfall > 0) {
-            if (currentWeather.snowfall > 0) {
-                queries.push('snow winter');
-            } else {
-                queries.push('rain');
-            }
-        }
-    }
-    
-    // Priority 3: Time of day with vibe
-    const timeOfDay = getTimeOfDay();
-    if (timeOfDay === 'night') {
-        const nightThemes = ['night lights', 'night city', 'night sky', 'stars', 'moonlight'];
-        queries.push(nightThemes[Math.floor(Math.random() * nightThemes.length)]);
-    } else if (timeOfDay === 'dawn') {
-        queries.push('sunrise golden hour');
-    } else if (timeOfDay === 'dusk') {
-        queries.push('sunset golden hour');
-    }
-    
-    // Priority 4: Season (if no holiday)
+    // Priority 2: Season (if no holiday)
     if (!holiday) {
         const season = getSeason();
         queries.push(season);
     }
     
-    // Add random theme for variety
-    queries.push(getRandomTheme());
+    // Priority 3: Time of day
+    const timeOfDay = getTimeOfDay();
+    queries.push(timeOfDay);
     
-    // Add random mood
-    queries.push(getRandomMood());
-    
-    // Combine queries - more variety, not just landscape nature
+    // Combine queries
     const finalQuery = queries.join(' ');
     console.log('Photo search query:', finalQuery);
     return finalQuery;
 }
 
-// Check if cached photo is still valid (less than 30 minutes old)
+// Check if cached photo is still valid AND matches current context
 function isCachedPhotoValid() {
     const cachedData = localStorage.getItem('unsplash_photo_cache');
     if (!cachedData) return false;
@@ -289,8 +271,21 @@ function isCachedPhotoValid() {
         const cacheAge = now - cache.timestamp;
         const thirtyMinutes = 30 * 60 * 1000;
         
-        // Only check time, not query (since random themes change each time)
-        return cacheAge < thirtyMinutes;
+        // Check if cache is expired
+        if (cacheAge >= thirtyMinutes) {
+            console.log('Cache expired (age:', Math.round(cacheAge / 60000), 'minutes)');
+            return false;
+        }
+        
+        // Check if query matches current context
+        const currentQuery = buildPhotoQuery();
+        if (cache.query !== currentQuery) {
+            console.log('Query changed from', cache.query, 'to', currentQuery);
+            return false;
+        }
+        
+        console.log('Cache is valid (age:', Math.round(cacheAge / 60000), 'minutes, query:', cache.query, ')');
+        return true;
     } catch (error) {
         console.error('Failed to parse cache:', error);
         return false;
@@ -319,6 +314,7 @@ function cachePhoto(photo, query) {
         timestamp: Date.now()
     };
     localStorage.setItem('unsplash_photo_cache', JSON.stringify(cacheData));
+    console.log('Photo cached with query:', query);
 }
 
 // Display photo (from cache or fresh)
@@ -353,11 +349,11 @@ async function displayPhoto(photo) {
 // Fetch and display Unsplash background photo
 async function fetchUnsplashPhoto(forceRefresh = false) {
     try {
-        // Check cache first
+        // Check cache first (unless forced refresh)
         if (!forceRefresh && isCachedPhotoValid()) {
             const cachedPhoto = getCachedPhoto();
             if (cachedPhoto) {
-                console.log('Using cached photo');
+                console.log('Using valid cached photo');
                 await displayPhoto(cachedPhoto);
                 return;
             }
@@ -376,9 +372,9 @@ async function fetchUnsplashPhoto(forceRefresh = false) {
             query: query
         });
         
-        console.log('Unsplash photo:', photo);
+        console.log('Unsplash photo fetched successfully');
         
-        // Cache the photo
+        // Cache the photo with current query
         cachePhoto(photo, query);
         
         // Display the photo
@@ -387,12 +383,20 @@ async function fetchUnsplashPhoto(forceRefresh = false) {
     } catch (error) {
         console.error('Failed to fetch Unsplash photo:', error);
         
-        // Try to use cached photo as fallback
+        // Try to use cached photo as fallback (even if expired)
         const cachedPhoto = getCachedPhoto();
         if (cachedPhoto) {
-            console.log('Using cached photo as fallback');
+            console.log('Using cached photo as fallback after error');
             await displayPhoto(cachedPhoto);
         }
+    }
+}
+
+// Check if photo context has changed and fetch new photo if needed
+function checkPhotoContext() {
+    if (!isCachedPhotoValid()) {
+        console.log('Photo context changed or cache expired, fetching new photo...');
+        fetchUnsplashPhoto();
     }
 }
 

@@ -3,6 +3,10 @@
 body {
 	min-block-size: 100vh;
 	margin: 0;
+
+	background-repeat: no-repeat;
+	background-size: cover;
+	background-position: center;
 }
 
 #card_wrapper{
