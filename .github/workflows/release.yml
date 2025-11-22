@@ -7,8 +7,8 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
-  build-linux:
-    name: Build for Linux ARM64 (Raspberry Pi)
+  build-linux-x64:
+    name: Build for Linux x86_64 (Optional - for testing)
     runs-on: ubuntu-latest
     
     steps:
@@ -22,8 +22,6 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-unknown-linux-gnu
 
       - name: Install dependencies
         run: npm install
@@ -40,28 +38,20 @@ jobs:
             libsoup-3.0-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf \
-            gcc-aarch64-linux-gnu \
-            g++-aarch64-linux-gnu
+            patchelf
 
-      - name: Set environment for cross-compilation
-        run: |
-          echo "PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> $GITHUB_ENV
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-
-      - name: Build for Raspberry Pi (ARM64)
-        run: npm run tauri build -- --target aarch64-unknown-linux-gnu
+      - name: Build for x86_64
+        run: npm run tauri build
         env:
           UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
 
-      - name: Upload ARM64 build artifacts
+      - name: Upload x86_64 build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: raspberrypi-dashboard-linux-arm64
+          name: raspberrypi-dashboard-linux-x64
           path: |
-            src-tauri/target/aarch64-unknown-linux-gnu/release/bundle/deb/*.deb
-            src-tauri/target/aarch64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
           if-no-files-found: warn
 
   build-linux-x64:
@@ -113,17 +103,11 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [build-linux, build-linux-x64]
+    needs: [build-linux-x64]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     
     steps:
-      - name: Download ARM64 artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: raspberrypi-dashboard-linux-arm64
-          path: dist/arm64
-
       - name: Download x64 artifacts
         uses: actions/download-artifact@v4
         with:
@@ -134,10 +118,28 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/arm64/**/*
             dist/x64/**/*
           draft: false
           prerelease: false
           generate_release_notes: true
+          body: |
+            ## Installation on Raspberry Pi
+            
+            To build and install on your Raspberry Pi:
+            
+            ```bash
+            # Clone the repository
+            git clone https://github.com/${{ github.repository }}
+            cd RaspberryPi_Dashboard
+            
+            # Install dependencies
+            npm install
+            
+            # Build
+            npm run tauri build
+            
+            # Install the .deb package
+            sudo dpkg -i src-tauri/target/release/bundle/deb/*.deb
+            ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
