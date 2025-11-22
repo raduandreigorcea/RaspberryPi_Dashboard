@@ -424,6 +424,8 @@ async function displayPhoto(photo, timestamp = null, query = null) {
             try {
                 const debugEl = document.getElementById('debug');
                 if (debugEl) {
+                    // Make sure the debug panel is visible when enabled
+                    debugEl.style.display = 'grid';
                     // Prefer the provided query, otherwise try to read from cache
                     let usedQuery = query;
                     if (!usedQuery) {

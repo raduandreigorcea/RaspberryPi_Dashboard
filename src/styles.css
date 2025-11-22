@@ -208,5 +208,5 @@ body {
 	color: green;
 	padding: 10px;
 	border: 2px green dashed;
-	display: grid;
+	display: none;
 }
