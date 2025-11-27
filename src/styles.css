@@ -1,212 +1,233 @@
-@import url(https://fonts.googleapis.com/css?family=Open+Sans:300,400,700);
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap");
+
+:root {
+	--bg-overlay: rgba(0, 0, 0, 0.22);
+	--card-bg: rgba(20, 18, 16, 0.46);
+	--card-bg-strong: rgba(10, 10, 12, 0.72);
+	--muted: rgba(255, 255, 255, 0.88);
+	--glass-blur: 10px;
+	--radius: 16px;
+	--weather-card-height: 15vmin;
+	--card-font-size: 2vmin;
+}
+
+* {
+	box-sizing: border-box;
+	user-select: none
+}
 
 body {
-	min-block-size: 100vh;
+	min-height: 100vh;
 	margin: 0;
-
+	font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+	color: var(--muted);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 	background-repeat: no-repeat;
 	background-size: cover;
 	background-position: center;
 }
 
-#card_wrapper{
-  position: fixed;
-  top: 1vmin;
-  right: 1vmin;
-  opacity: 0.9;
+/* Top-right card container */
+#card_wrapper {
+	position: fixed;
+	top: 1.5rem;
+	right: 1.5rem;
+	z-index: 30;
+	
+	width: 36vmin;
+	font-family: inherit;
+	display: grid;
+	gap: 1rem;
 }
 
-.cards{
-	width: 44vmin;
-	height: 20vmin;
-	font-family: 'Open Sans';
-	position: relative;
-}
-
-.currentTemp{
-	width: 22vmin;
-	height: 20vmin;
-	background: rgb(41, 41, 41);
-	position: absolute;
-	top: 0;
-	left: 0;
+/* Unified card base to reduce duplication across different card elements */
+.card {
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    width: 18vmin;
+	background: var(--card-bg);
+	height: var(--weather-card-height);
+	font-size: var(--card-font-size);
 	display: grid;
 	place-items: center;
+	gap: .6rem;
 }
 
-.currentTimeDate{
-	width: 22vmin;
-	height: 20vmin;
-	background: rgb(237, 237, 237);
-	margin: 0;
-	position: absolute;
-	top: 0;
-	right: 0;
-	display: grid;
-	place-items: center;
+.currentTemp,
+.currentTimeDate {
+    height: 14vmin;
+	border-radius: var(--radius);
+	padding-block: 6rem;
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
-.temp{
-	font-size: 8vmin;
-	text-align: center;
-	display: block;
+.currentTemp {
+	background: var(--card-bg-strong);
+	color: #fff;
+}
+
+.currentTimeDate {
+	background: linear-gradient(180deg, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.2));
+	color: var(--muted);
+}
+
+.currentTemp,
+.currentTimeDate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.temp {
+	font-size: 9vmin; /* slightly larger for readability */
 	font-weight: 300;
-	color: rgb(255, 255, 255);
+	line-height: 1
 }
 
-.location{
-	color: rgb(255, 255, 255);
-	text-align: center;
+.location {
+	font-size: 2.6vmin; /* a bit larger */
+	font-weight: 700;
 	text-transform: uppercase;
-	font-weight: 700;
-	font-size: 3vmin;
-	display: block;
+	letter-spacing: .06em;
+	margin-top: 4px
 }
 
-.time{
+.time {
 	font-size: 5.5vmin;
-	text-align: center;
-	display: block;
-	font-weight: 700;
-	color: rgb(41, 41, 41);
+	font-weight: 700
 }
 
-.date{
-	color: rgb(41, 41, 41);
-	text-align: center;
-	font-weight: 700;
-	font-size: 3vmin;
-	display: block;
-    line-height: 0.9;
+.date {
+	font-size: 2.4vmin;
+	opacity: .95;
+	margin-top: 4px
 }
 
+/* Photo credit: subtle pill */
 #photo-credit {
 	position: fixed;
-	bottom: 10px;
-	right: 10px;
-	color: rgba(255, 255, 255, 0.7);
-	font-size: 12px;
-	font-family: 'Open Sans', sans-serif;
-	font-weight: 400;
-	text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-}
-
-#photo-credit a {
+	bottom: 14px;
+	right: 14px;
+	z-index: 40;
+	background: rgba(0, 0, 0, 0.35);
 	color: rgba(255, 255, 255, 0.9);
-	text-decoration: underline;
-	font-family: 'Open Sans', sans-serif;
+	padding: 6px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
 /* Weather details cards - bottom left */
 #weather_details_wrapper {
 	position: fixed;
-	bottom: 1vmin;
-	left: 1vmin;
+	bottom: 1.5rem;
+	left: 1.5rem;
 	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	gap: 1vmin;
-	opacity: 0.9;
+	gap: 1rem;
+	z-index: 30
 }
 
-.weather-card {
-	font-family: 'Open Sans';
-	background: rgb(41, 41, 41);
-	padding: 1.2vmin;
-	display: flex;
-	align-items: center;
-	gap: 1vmin;
-}
+/* `.weather-card` merged into `.card` to use a single bottom-card class. */
 
-.small-card {
-	min-width: 14vmin;
-}
-
-.sun-card {
-	display: flex;
-	flex-direction: column;
-	gap: 0.8vmin;
-	align-items: flex-start;
-	min-width: 14vmin;
-}
-
-.sun-item {
-	display: flex;
-	align-items: center;
-	gap: 1vmin;
+.item {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
 }
 
 .cpu-card {
-	justify-content: center;
-	background: rgb(41, 41, 41);
-	gap: 0.8vmin;
-	min-width: 14vmin;
+	display: flex;
+	align-items: center;
+	gap: .6rem
 }
 
 .weather-icon {
-	width: 3vmin;
-	height: 3vmin;
+	width: 2.2em;
+	height: 2.2em;
 	filter: brightness(0) invert(1);
-	opacity: 0.9;
-	flex-shrink: 0;
 }
 
 .weather-data {
 	display: flex;
-	flex-direction: column;
-	gap: 0.1vmin;
+	flex-direction: column
 }
 
 .weather-label {
-	font-size: 1.6vmin;
-	color: rgba(255, 255, 255, 0.7);
-	font-weight: 400;
+	font-size: 0.9em; /* scaled from base card font-size */
+	color: rgba(255, 255, 255, 0.85);
 	text-transform: uppercase;
-	letter-spacing: 0.05em;
+	letter-spacing: .06em;
 }
 
 .weather-value {
-	font-size: 2.2vmin;
-	color: rgb(255, 255, 255);
+	font-size: 1.25em; /* slightly larger than label */
 	font-weight: 700;
+	color: #fff;
 }
 
 .cpu-label {
-	font-size: 1.6vmin;
-	color: rgb(255, 255, 255);
+	font-size: 0.95em;
 	font-weight: 700;
-	text-transform: uppercase;
 }
 
 .cpu-value {
-	font-size: 2vmin;
-	color: rgb(255, 255, 255);
+	font-size: 1.1em;
 	font-weight: 700;
 }
 
 .dual-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5vmin;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: .4rem
 }
 
-#time, #date {
-	color: rgb(41,41,41);
+#time,
+#date {
+	color: var(--muted)
 }
 
-* {
-	user-select: none;
-}
-
-
+/* Debug panel hidden by default; JS will show it when needed */
 #debug {
 	position: absolute;
 	top: 10px;
 	left: 10px;
-	background: #000;
-	color: green;
+	background: rgba(0, 0, 0, 0.7);
+	color: #9cff9c;
 	padding: 10px;
-	border: 2px green dashed;
+	border-radius: 8px;
+	font-family: monospace;
+	font-size: 14px;
 	display: none;
+	z-index: 60
+}
+
+/* Small responsive tweaks */
+@media (max-width: 700px) {
+	#card_wrapper {
+		left: 1rem;
+		right: 1rem;
+		top: 1rem;
+		display: flex;
+		flex-direction: column
+	}
+
+	.cards {
+		width: calc(100% - 2rem)
+	}
+}
+
+/* No hover/interactive animations — device is glance-only (Raspberry Pi) */
+/* Keep layout stable and reduce unnecessary repaints. */
+
+/* make links inside cards slightly more visible */
+a {
+	color: var(--accent)
 }

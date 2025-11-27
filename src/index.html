@@ -11,32 +11,30 @@
 </head>
 
 <body>
- 
+
 
   <aside id="card_wrapper">
-    <article class="cards">
-      <section class="currentTemp">
-        <span class="temp" id="temp">--&deg;</span>
-        <span class="location" id="location">...</span>
-      </section>
-      <section class="currentTimeDate">
-        <span class="temp" id="time"></span>
-        <span class="location" id="date"></span>
-      </section>
-    </article>
+    <section class="currentTemp">
+      <span class="temp" id="temp">--&deg;</span>
+      <span class="location" id="location">...</span>
+    </section>
+    <section class="currentTimeDate">
+      <span class="temp" id="time"></span>
+      <span class="location" id="date"></span>
+    </section>
   </aside>
 
   <div id="weather_details_wrapper">
     <!-- Humidity + Wind Card -->
-    <article class="weather-card sun-card">
-      <div class="sun-item">
+    <article class="card">
+      <div class="item">
         <img src="assets/droplet.svg" alt="Humidity" class="weather-icon">
         <div class="weather-data">
           <span class="weather-label">Humidity</span>
           <span class="weather-value" id="humidity">--%</span>
         </div>
       </div>
-      <div class="sun-item">
+      <div class="item">
         <img src="assets/wind.svg" alt="Wind" class="weather-icon">
         <div class="weather-data">
           <span class="weather-label">Wind</span>
@@ -46,15 +44,15 @@
     </article>
 
     <!-- Sky + Clouds Card -->
-    <article class="weather-card sun-card">
-      <div class="sun-item">
+    <article class="card">
+      <div class="item">
         <img src="assets/umbrella.svg" alt="Sky" class="weather-icon" id="precip-icon">
         <div class="weather-data">
           <span class="weather-label" id="precip-label">Sky</span>
           <span class="weather-value" id="precipitation">Clear</span>
         </div>
       </div>
-      <div class="sun-item">
+      <div class="item">
         <img src="assets/cloudy.svg" alt="Clouds" class="weather-icon">
         <div class="weather-data">
           <span class="weather-label">Clouds</span>
@@ -64,15 +62,15 @@
     </article>
 
     <!-- Sunrise/Sunset Card -->
-    <article class="weather-card sun-card">
-      <div class="sun-item">
+    <article class="card">
+      <div class="item">
         <img src="assets/sunrise.svg" alt="Sunrise" class="weather-icon">
         <div class="weather-data">
           <span class="weather-label">Sunrise</span>
           <span class="weather-value" id="sunrise">--:--</span>
         </div>
       </div>
-      <div class="sun-item">
+      <div class="item">
         <img src="assets/sunset.svg" alt="Sunset" class="weather-icon">
         <div class="weather-data">
           <span class="weather-label">Sunset</span>
@@ -82,7 +80,7 @@
     </article>
 
     <!-- CPU Temperature Card (hidden on non-Linux) -->
-    <article class="weather-card cpu-card">
+    <article class="card cpu-card">
       <span class="cpu-label">CPU</span>
       <span class="cpu-value" id="cpu-temp">--°</span>
     </article>
