@@ -28,7 +28,6 @@ body {
 	background-position: center;
 }
 
-/* Top-right card container */
 #card_wrapper {
 	position: fixed;
 	top: 1.5rem;
@@ -41,7 +40,6 @@ body {
 	gap: 1rem;
 }
 
-/* Unified card base to reduce duplication across different card elements */
 .card {
     border-radius: var(--radius);
     padding: 1rem 1.2rem;
@@ -59,7 +57,7 @@ body {
 
 .currentTemp,
 .currentTimeDate {
-    height: 14vmin;
+    height: 20vmin;
 	border-radius: var(--radius);
 	padding-block: 6rem;
     backdrop-filter: blur(var(--glass-blur));
@@ -86,13 +84,13 @@ body {
 }
 
 .temp {
-	font-size: 9vmin; /* slightly larger for readability */
+	font-size: 9vmin;
 	font-weight: 300;
 	line-height: 1
 }
 
 .location {
-	font-size: 2.6vmin; /* a bit larger */
+	font-size: 2.6vmin; 
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: .06em;
@@ -110,7 +108,6 @@ body {
 	margin-top: 4px
 }
 
-/* Photo credit: subtle pill */
 #photo-credit {
 	position: fixed;
 	bottom: 14px;
@@ -124,7 +121,6 @@ body {
 	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
-/* Weather details cards - bottom left */
 #weather_details_wrapper {
 	position: fixed;
 	bottom: 1.5rem;
@@ -133,8 +129,6 @@ body {
 	gap: 1rem;
 	z-index: 30
 }
-
-/* `.weather-card` merged into `.card` to use a single bottom-card class. */
 
 .item {
     display: flex;
@@ -160,14 +154,14 @@ body {
 }
 
 .weather-label {
-	font-size: 0.9em; /* scaled from base card font-size */
+	font-size: 0.9em; 
 	color: rgba(255, 255, 255, 0.85);
 	text-transform: uppercase;
 	letter-spacing: .06em;
 }
 
 .weather-value {
-	font-size: 1.25em; /* slightly larger than label */
+	font-size: 1.25em;
 	font-weight: 700;
 	color: #fff;
 }
@@ -191,7 +185,12 @@ body {
 
 #time,
 #date {
-	color: var(--muted)
+	color: var(--muted);
+	text-align: center;
+}
+
+#date {
+	line-height: 1.2em;
 }
 
 /* Debug panel hidden by default; JS will show it when needed */
@@ -209,25 +208,6 @@ body {
 	z-index: 60
 }
 
-/* Small responsive tweaks */
-@media (max-width: 700px) {
-	#card_wrapper {
-		left: 1rem;
-		right: 1rem;
-		top: 1rem;
-		display: flex;
-		flex-direction: column
-	}
-
-	.cards {
-		width: calc(100% - 2rem)
-	}
-}
-
-/* No hover/interactive animations — device is glance-only (Raspberry Pi) */
-/* Keep layout stable and reduce unnecessary repaints. */
-
-/* make links inside cards slightly more visible */
 a {
-	color: var(--accent)
+	color: var(--muted);
 }
