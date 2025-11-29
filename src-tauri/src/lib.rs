@@ -7,7 +7,7 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Location {
     pub latitude: f64,
     pub longitude: f64,
@@ -23,7 +23,7 @@ struct IpApiResponse {
     country: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UnsplashPhoto {
     pub url: String,
     pub author: String,
@@ -59,7 +59,7 @@ struct UnsplashUserLinks {
     html: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WeatherData {
     pub temperature: f64,
     pub humidity: f64,
@@ -121,6 +121,36 @@ pub struct FormattedTime {
     pub date: String,           // e.g., "Nov 28, 2025"
     pub day_of_week: String,    // e.g., "FRIDAY"
     pub timestamp: u64,         // Unix timestamp in milliseconds
+}
+
+#[derive(Debug, Serialize)]
+pub struct PhotoCache {
+    pub photo: UnsplashPhoto,
+    pub query: String,
+    pub timestamp: u64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PrecipitationDisplay {
+    pub icon: String,      // "snowflake.svg", "droplet.svg", "umbrella.svg"
+    pub label: String,     // "Snow", "Rain", "Sky"
+    pub value: String,     // "5 mm", "Clear"
+}
+
+#[derive(Debug, Serialize)]
+pub struct NightOverlayResult {
+    pub should_apply: bool,
+    pub time_of_day: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DebugInfo {
+    pub photo_age: String,
+    pub query: String,
+    pub next_dawn: String,
+    pub next_day: String,
+    pub next_dusk: String,
+    pub next_night: String,
 }
 
 #[tauri::command]
@@ -401,6 +431,157 @@ fn get_current_time() -> FormattedTime {
     }
 }
 
+#[tauri::command]
+fn get_precipitation_display(weather: WeatherData) -> PrecipitationDisplay {
+    if weather.snowfall > 0.0 {
+        PrecipitationDisplay {
+            icon: "snowflake.svg".to_string(),
+            label: "Snow".to_string(),
+            value: format!("{} mm", weather.snowfall),
+        }
+    } else if weather.rain > 0.0 {
+        PrecipitationDisplay {
+            icon: "droplet.svg".to_string(),
+            label: "Rain".to_string(),
+            value: format!("{} mm", weather.rain),
+        }
+    } else {
+        PrecipitationDisplay {
+            icon: "umbrella.svg".to_string(),
+            label: "Sky".to_string(),
+            value: "Clear".to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+fn should_apply_night_overlay(sunrise_iso: String, sunset_iso: String) -> NightOverlayResult {
+    let tod = get_time_of_day(Some(sunrise_iso), Some(sunset_iso));
+    
+    NightOverlayResult {
+        should_apply: tod.time_of_day == "night",
+        time_of_day: tod.time_of_day,
+    }
+}
+
+#[tauri::command]
+fn is_cache_valid(cache_timestamp: u64) -> bool {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+    
+    let cache_age = now - cache_timestamp;
+    let thirty_minutes = 30 * 60 * 1000;
+    
+    cache_age < thirty_minutes
+}
+
+#[tauri::command]
+fn format_time_remaining(milliseconds: i64) -> String {
+    if milliseconds <= 0 {
+        return "0s".to_string();
+    }
+    
+    let total_seconds = milliseconds / 1000;
+    let hours = total_seconds / 3600;
+    let minutes = (total_seconds % 3600) / 60;
+    let seconds = total_seconds % 60;
+    
+    if hours > 0 {
+        format!("{}h {:02}m", hours, minutes)
+    } else if minutes > 0 {
+        format!("{}m {:02}s", minutes, seconds)
+    } else {
+        format!("{}s", seconds)
+    }
+}
+
+#[tauri::command]
+fn get_debug_info(
+    cache_timestamp: Option<u64>,
+    query: Option<String>,
+    sunrise_iso: Option<String>,
+    sunset_iso: Option<String>,
+) -> DebugInfo {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64;
+    
+    let photo_age = if let Some(ts) = cache_timestamp {
+        let seconds = (now - ts) / 1000;
+        if seconds < 60 {
+            format!("{}s ago", seconds)
+        } else {
+            let minutes = seconds / 60;
+            if minutes < 60 {
+                format!("{}m ago", minutes)
+            } else {
+                let hours = minutes / 60;
+                if hours < 24 {
+                    format!("{}h ago", hours)
+                } else {
+                    format!("{}d ago", hours / 24)
+                }
+            }
+        }
+    } else {
+        "unknown".to_string()
+    };
+    
+    let query_str = query.unwrap_or_else(|| "n/a".to_string());
+    
+    // Calculate next transition times
+    let (next_dawn, next_day, next_dusk, next_night) = if let (Some(sunrise), Some(sunset)) = (sunrise_iso, sunset_iso) {
+        if let (Ok(sunrise_dt), Ok(sunset_dt)) = (
+            DateTime::parse_from_rfc3339(&sunrise),
+            DateTime::parse_from_rfc3339(&sunset),
+        ) {
+            let now_utc = Utc::now();
+            let one_hour = chrono::Duration::hours(1).num_milliseconds();
+            let one_day = chrono::Duration::days(1).num_milliseconds();
+            
+            let sunrise_ts = sunrise_dt.timestamp_millis();
+            let sunset_ts = sunset_dt.timestamp_millis();
+            let now_ts = now_utc.timestamp_millis();
+            
+            let pick_next = |ts: i64| -> i64 {
+                if ts > now_ts {
+                    ts
+                } else {
+                    ts + one_day
+                }
+            };
+            
+            let dawn_ts = pick_next(sunrise_ts - one_hour);
+            let day_ts = pick_next(sunrise_ts + one_hour);
+            let dusk_ts = pick_next(sunset_ts - one_hour);
+            let night_ts = pick_next(sunset_ts + one_hour);
+            
+            (
+                format_time_remaining(dawn_ts - now_ts),
+                format_time_remaining(day_ts - now_ts),
+                format_time_remaining(dusk_ts - now_ts),
+                format_time_remaining(night_ts - now_ts),
+            )
+        } else {
+            ("n/a".to_string(), "n/a".to_string(), "n/a".to_string(), "n/a".to_string())
+        }
+    } else {
+        ("n/a".to_string(), "n/a".to_string(), "n/a".to_string(), "n/a".to_string())
+    };
+    
+    DebugInfo {
+        photo_age,
+        query: query_str,
+        next_dawn,
+        next_day,
+        next_dusk,
+        next_night,
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     dotenvy::dotenv().ok();
@@ -419,6 +600,11 @@ pub fn run() {
             get_time_of_day,
             build_photo_query,
             get_current_time,
+            get_precipitation_display,
+            should_apply_night_overlay,
+            is_cache_valid,
+            format_time_remaining,
+            get_debug_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

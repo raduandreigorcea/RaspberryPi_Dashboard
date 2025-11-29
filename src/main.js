@@ -1,64 +1,52 @@
 const invoke = window.__TAURI__.core.invoke;
 
 // Toggle debug output
-let SHOW_DEBUG = false;
+let SHOW_DEBUG = true;
 
-// Store location and weather data
-let userLocation = null;
+// Store state
 let currentWeather = null;
-let isWeatherLoaded = false;
-
-// Timers
-let photoAgeInterval = null;
-let nightOverlayInterval = null;
 let currentPhotoUrl = null;
+let debugInterval = null;
+let nightOverlayInterval = null;
 
-// Update weather display with data from Rust backend
+// Update weather display
 function updateWeatherDisplay(weather) {
     document.getElementById('temp').textContent = `${Math.round(weather.temperature)}° C`;
     document.getElementById('humidity').textContent = `${weather.humidity}%`;
     document.getElementById('wind').textContent = `${Math.round(weather.wind_speed)} km/h`;
     document.getElementById('cloudiness').textContent = `${weather.cloudcover}%`;
 
-    // Update precipitation
-    const precipIcon = document.getElementById('precip-icon');
-    const precipLabel = document.getElementById('precip-label');
-    const precipValue = document.getElementById('precipitation');
-    
-    if (weather.snowfall > 0) {
-        precipIcon.src = 'assets/snowflake.svg';
-        precipLabel.textContent = 'Snow';
-        precipValue.textContent = `${weather.snowfall} mm`;
-    } else if (weather.rain > 0) {
-        precipIcon.src = 'assets/droplet.svg';
-        precipLabel.textContent = 'Rain';
-        precipValue.textContent = `${weather.rain} mm`;
-    } else {
-        precipIcon.src = 'assets/umbrella.svg';
-        precipLabel.textContent = 'Sky';
-        precipValue.textContent = 'Clear';
-    }
+    // Update precipitation using Rust logic
+    invoke('get_precipitation_display', { weather }).then(precip => {
+        document.getElementById('precip-icon').src = `assets/${precip.icon}`;
+        document.getElementById('precip-label').textContent = precip.label;
+        document.getElementById('precipitation').textContent = precip.value;
+    });
 
     // Update sunrise/sunset
     const sunrise = new Date(weather.sunrise);
     const sunset = new Date(weather.sunset);
-    document.getElementById('sunrise').textContent = sunrise.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    document.getElementById('sunset').textContent = sunset.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    document.getElementById('sunrise').textContent = sunrise.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+    });
+    document.getElementById('sunset').textContent = sunset.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+    });
 
     currentWeather = weather;
-    isWeatherLoaded = true;
 }
 
 // Fetch and display location
 async function fetchLocation() {
     try {
         const location = await invoke('get_location');
-        userLocation = location;
-
-        const locationElement = document.getElementById('location');
-        locationElement.textContent = location.city || `${location.latitude.toFixed(2)}°, ${location.longitude.toFixed(2)}°`;
-
-        await updateWeather();
+        document.getElementById('location').textContent = 
+            location.city || `${location.latitude.toFixed(2)}°, ${location.longitude.toFixed(2)}°`;
+        await updateWeather(location);
     } catch (error) {
         console.error('Failed to fetch location:', error);
         document.getElementById('location').textContent = 'Unknown';
@@ -66,21 +54,15 @@ async function fetchLocation() {
 }
 
 // Update weather data
-async function updateWeather() {
-    if (!userLocation) return;
-
+async function updateWeather(location) {
     try {
         const weather = await invoke('get_weather', {
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude
+            latitude: location.latitude,
+            longitude: location.longitude
         });
         
         updateWeatherDisplay(weather);
-        
-        // Fetch photo immediately after weather is loaded
-        if (isWeatherLoaded) {
-            await fetchUnsplashPhoto();
-        }
+        await fetchUnsplashPhoto();
     } catch (error) {
         console.error('Failed to fetch weather:', error);
     }
@@ -104,12 +86,11 @@ async function updateCPUTemp() {
     }
 }
 
-// Update time and date using Rust backend
+// Update time and date
 async function updateTimeAndDate() {
     try {
         const timeData = await invoke('get_current_time');
         document.getElementById('time').textContent = timeData.time;
-        // Display as "FRIDAY\nNOV 28, 2025" with line break
         document.getElementById('date').innerHTML = `${timeData.day_of_week}<br>${timeData.date}`;
     } catch (error) {
         console.error('Failed to update time:', error);
@@ -121,12 +102,12 @@ async function applyNightOverlay() {
     if (!currentPhotoUrl || !currentWeather) return;
     
     try {
-        const tod = await invoke('get_time_of_day', {
+        const result = await invoke('should_apply_night_overlay', {
             sunriseIso: currentWeather.sunrise,
             sunsetIso: currentWeather.sunset
         });
         
-        if (tod.time_of_day === 'night') {
+        if (result.should_apply) {
             const gradient = 'linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3))';
             document.body.style.backgroundImage = `${gradient}, url('${currentPhotoUrl}')`;
         } else {
@@ -138,22 +119,6 @@ async function applyNightOverlay() {
 }
 
 // Cache helpers
-function isCachedPhotoValid() {
-    const cachedData = localStorage.getItem('unsplash_photo_cache');
-    if (!cachedData) return false;
-    
-    try {
-        const cache = JSON.parse(cachedData);
-        const cacheAge = Date.now() - cache.timestamp;
-        const thirtyMinutes = 30 * 60 * 1000;
-        
-        if (cacheAge >= thirtyMinutes) return false;
-        return true;
-    } catch (error) {
-        return false;
-    }
-}
-
 function getCachedPhoto() {
     try {
         const cachedData = localStorage.getItem('unsplash_photo_cache');
@@ -189,7 +154,7 @@ async function displayPhoto(photo, timestamp = null, query = null) {
     creditElement.innerHTML = `Photo by <a href="${photo.author_url}" target="_blank">${photo.author}</a> on <a href="https://unsplash.com" target="_blank">Unsplash</a>`;
 
     // Clear previous intervals
-    if (photoAgeInterval) clearInterval(photoAgeInterval);
+    if (debugInterval) clearInterval(debugInterval);
     if (nightOverlayInterval) clearInterval(nightOverlayInterval);
 
     // Trigger Unsplash download endpoint
@@ -207,67 +172,24 @@ async function displayPhoto(photo, timestamp = null, query = null) {
         if (debugEl) {
             debugEl.style.display = 'grid';
             
-            let usedQuery = query || getCachedPhoto()?.query;
-            let ts = timestamp || getCachedPhoto()?.timestamp;
-
             const renderDebug = async () => {
-                const ageText = ts ? (() => {
-                    const seconds = Math.floor((Date.now() - ts) / 1000);
-                    if (seconds < 60) return `${seconds}s ago`;
-                    const minutes = Math.floor(seconds / 60);
-                    if (minutes < 60) return `${minutes}m ago`;
-                    const hours = Math.floor(minutes / 60);
-                    if (hours < 24) return `${hours}h ago`;
-                    return `${Math.floor(hours / 24)}d ago`;
-                })() : 'unknown';
-
-                // Get next transition times from Rust
-                let nextTimesHtml = '';
-                if (currentWeather?.sunrise && currentWeather?.sunset) {
-                    try {
-                        const sunriseTs = new Date(currentWeather.sunrise).getTime();
-                        const sunsetTs = new Date(currentWeather.sunset).getTime();
-                        const now = Date.now();
-                        const oneHour = 60 * 60 * 1000;
-                        
-                        const formatRemaining = (ms) => {
-                            if (ms <= 0) return '0s';
-                            const total = Math.floor(ms / 1000);
-                            const hours = Math.floor(total / 3600);
-                            const minutes = Math.floor((total % 3600) / 60);
-                            const seconds = total % 60;
-                            if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
-                            if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
-                            return `${seconds}s`;
-                        };
-
-                        const pickNext = (ts) => ts > now ? ts : ts + 24 * 60 * 60 * 1000;
-                        
-                        const dawnTs = pickNext(sunriseTs - oneHour);
-                        const dayTs = pickNext(sunriseTs + oneHour);
-                        const duskTs = pickNext(sunsetTs - oneHour);
-                        const nightTs = pickNext(sunsetTs + oneHour);
-
-                        nextTimesHtml = `
-                            <div>Next dawn in ${formatRemaining(dawnTs - now)}</div>
-                            <div>Next day in ${formatRemaining(dayTs - now)}</div>
-                            <div>Next dusk in ${formatRemaining(duskTs - now)}</div>
-                            <div>Next night in ${formatRemaining(nightTs - now)}</div>
-                        `;
-                    } catch (e) {
-                        console.error('Error calculating next times:', e);
-                    }
+                try {
+                    const debugInfo = await invoke('get_debug_info', {
+                        cacheTimestamp: timestamp || getCachedPhoto()?.timestamp,
+                        query: query || getCachedPhoto()?.query
+                    });
+                    
+                    debugEl.innerHTML = `
+                        <div>Photo cached: ${debugInfo.photo_age}</div>
+                        <div>Query: ${debugInfo.query}</div>
+                    `;
+                } catch (e) {
+                    console.error('Failed to render debug:', e);
                 }
-
-                debugEl.innerHTML = `
-                    <div>Photo cached: ${ageText}</div>
-                    <div>Query: ${usedQuery || 'n/a'}</div>
-                    ${nextTimesHtml}
-                `;
             };
 
             await renderDebug();
-            photoAgeInterval = setInterval(renderDebug, 1000);
+            debugInterval = setInterval(renderDebug, 1000);
         }
     } else {
         const debugEl = document.getElementById('debug');
@@ -281,18 +203,22 @@ async function displayPhoto(photo, timestamp = null, query = null) {
 // Fetch Unsplash photo
 async function fetchUnsplashPhoto(forceRefresh = false) {
     try {
-        // Use cache if valid
-        if (!forceRefresh && isCachedPhotoValid()) {
-            const cached = getCachedPhoto();
-            if (cached) {
+        const cached = getCachedPhoto();
+        
+        // Check cache validity using Rust
+        if (!forceRefresh && cached) {
+            const isValid = await invoke('is_cache_valid', { 
+                cacheTimestamp: cached.timestamp 
+            });
+            
+            if (isValid) {
                 console.log('Using cached photo');
                 await displayPhoto(cached.photo, cached.timestamp, cached.query);
                 return;
             }
         }
         
-        // Wait for weather data if not loaded yet
-        if (!isWeatherLoaded) {
+        if (!currentWeather) {
             console.log('Waiting for weather data before fetching photo...');
             return;
         }
@@ -334,11 +260,20 @@ async function fetchUnsplashPhoto(forceRefresh = false) {
 
 // Check if photo context has changed
 async function checkPhotoContext() {
-    if (!isWeatherLoaded) return;
+    const cached = getCachedPhoto();
+    if (!cached) return;
     
-    if (!isCachedPhotoValid()) {
-        console.log('Photo context changed, fetching new photo...');
-        await fetchUnsplashPhoto();
+    try {
+        const isValid = await invoke('is_cache_valid', { 
+            cacheTimestamp: cached.timestamp 
+        });
+        
+        if (!isValid) {
+            console.log('Photo context changed, fetching new photo...');
+            await fetchUnsplashPhoto();
+        }
+    } catch (error) {
+        console.error('Failed to check photo context:', error);
     }
 }
 
@@ -346,14 +281,20 @@ async function checkPhotoContext() {
 updateTimeAndDate();
 setInterval(updateTimeAndDate, 1000);
 
-// Start with location fetch, which triggers weather, which triggers photo
 fetchLocation();
 
 updateCPUTemp();
 setInterval(updateCPUTemp, 10 * 1000);
 
-// Set up intervals
-setInterval(updateWeather, 15 * 60 * 1000);
+// Set up intervals - store location for weather updates
+let userLocation = null;
+fetchLocation().then(() => {
+    invoke('get_location').then(location => {
+        userLocation = location;
+        setInterval(() => updateWeather(userLocation), 15 * 60 * 1000);
+    });
+});
+
 setInterval(() => fetchUnsplashPhoto(true), 30 * 60 * 1000);
 setInterval(checkPhotoContext, 5 * 60 * 1000);
 
@@ -363,13 +304,13 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
 window.refreshPhoto = async function() {
     console.log('🔄 Manually refreshing photo...');
     try {
-        if (!isWeatherLoaded) {
+        if (!currentWeather && userLocation) {
             console.log('⚠️ Weather not loaded yet, fetching weather first...');
-            await updateWeather();
+            await updateWeather(userLocation);
         }
         
         console.log('📸 Fetching new photo with current context...');
-        await fetchUnsplashPhoto(true); // Force refresh
+        await fetchUnsplashPhoto(true);
         console.log('✅ Photo refreshed successfully!');
     } catch (error) {
         console.error('❌ Failed to refresh photo:', error);
