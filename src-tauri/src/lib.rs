@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Datelike, Local, Timelike, Utc};
+use chrono::{Datelike, Local, Timelike};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[tauri::command]
@@ -98,6 +98,7 @@ struct OpenMeteoDailyData {
 #[derive(Debug, Serialize)]
 pub struct TimeOfDay {
     pub time_of_day: String, // "dawn", "day", "dusk", "night"
+    pub source: String,      // "api" or "fallback"
 }
 
 #[derive(Debug, Serialize)]
@@ -141,6 +142,8 @@ pub struct PrecipitationDisplay {
 pub struct DebugInfo {
     pub photo_age: String,
     pub query: String,
+    pub time_source: String, // "api" or "fallback"
+    pub time_of_day: String, // "dawn", "day", "dusk", "night"
 }
 
 #[tauri::command]
@@ -231,15 +234,18 @@ fn get_holiday() -> Holiday {
 
 #[tauri::command]
 fn get_time_of_day(sunrise_iso: Option<String>, sunset_iso: Option<String>) -> TimeOfDay {
-    let now = Local::now();
-    
     // If we have sunrise/sunset data, use it
     if let (Some(sunrise_str), Some(sunset_str)) = (sunrise_iso, sunset_iso) {
-        if let (Ok(sunrise), Ok(sunset)) = (
-            DateTime::parse_from_rfc3339(&sunrise_str),
-            DateTime::parse_from_rfc3339(&sunset_str),
-        ) {
-            let now_utc = Utc::now();
+        // Parse as naive datetime (no timezone) since Open-Meteo returns local time
+        let sunrise_result = chrono::NaiveDateTime::parse_from_str(&sunrise_str, "%Y-%m-%dT%H:%M")
+            .or_else(|_| chrono::NaiveDateTime::parse_from_str(&sunrise_str, "%Y-%m-%dT%H:%M:%S"));
+            
+        let sunset_result = chrono::NaiveDateTime::parse_from_str(&sunset_str, "%Y-%m-%dT%H:%M")
+            .or_else(|_| chrono::NaiveDateTime::parse_from_str(&sunset_str, "%Y-%m-%dT%H:%M:%S"));
+        
+        if let (Ok(sunrise), Ok(sunset)) = (sunrise_result, sunset_result) {
+            // Get current time in local timezone
+            let now_local = Local::now().naive_local();
             let one_hour = chrono::Duration::hours(1);
             
             let dawn_start = sunrise - one_hour;
@@ -247,11 +253,11 @@ fn get_time_of_day(sunrise_iso: Option<String>, sunset_iso: Option<String>) -> T
             let dusk_start = sunset - one_hour;
             let dusk_end = sunset + one_hour;
             
-            let time_of_day = if now_utc >= dawn_start && now_utc <= dawn_end {
+            let time_of_day = if now_local >= dawn_start && now_local < dawn_end {
                 "dawn"
-            } else if now_utc >= dusk_start && now_utc <= dusk_end {
+            } else if now_local >= dusk_start && now_local < dusk_end {
                 "dusk"
-            } else if now_utc > dawn_end && now_utc < dusk_start {
+            } else if now_local >= dawn_end && now_local < dusk_start {
                 "day"
             } else {
                 "night"
@@ -259,24 +265,15 @@ fn get_time_of_day(sunrise_iso: Option<String>, sunset_iso: Option<String>) -> T
             
             return TimeOfDay {
                 time_of_day: time_of_day.to_string(),
+                source: "api".to_string(),
             };
         }
     }
     
-    // Fallback to hour-based calculation
-    let hour = now.hour();
-    let time_of_day = if hour >= 5 && hour < 8 {
-        "dawn"
-    } else if hour >= 8 && hour < 17 {
-        "day"
-    } else if hour >= 17 && hour < 20 {
-        "dusk"
-    } else {
-        "night"
-    };
-    
+    // Fallback: just return night if no sunrise/sunset data
     TimeOfDay {
-        time_of_day: time_of_day.to_string(),
+        time_of_day: "night".to_string(),
+        source: "fallback".to_string(),
     }
 }
 
@@ -488,6 +485,8 @@ fn format_time_remaining(milliseconds: i64) -> String {
 fn get_debug_info(
     cache_timestamp: Option<u64>,
     query: Option<String>,
+    sunrise_iso: Option<String>,
+    sunset_iso: Option<String>,
 ) -> DebugInfo {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -517,9 +516,14 @@ fn get_debug_info(
     
     let query_str = query.unwrap_or_else(|| "n/a".to_string());
     
+    // Get time of day info
+    let tod = get_time_of_day(sunrise_iso, sunset_iso);
+    
     DebugInfo {
         photo_age,
         query: query_str,
+        time_source: tod.source,
+        time_of_day: tod.time_of_day,
     }
 }
 

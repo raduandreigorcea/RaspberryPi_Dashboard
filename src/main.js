@@ -157,12 +157,15 @@ async function displayPhoto(photo, timestamp = null, query = null) {
                     const cached = getCachedPhoto();
                     const debugInfo = await invoke('get_debug_info', {
                         cacheTimestamp: cached?.timestamp,
-                        query: cached?.query
+                        query: cached?.query,
+                        sunriseIso: currentWeather?.sunrise,
+                        sunsetIso: currentWeather?.sunset
                     });
                     
                     debugEl.innerHTML = `
                         <div>Photo cached: ${debugInfo.photo_age}</div>
                         <div>Query: ${debugInfo.query}</div>
+                        <div>Time: ${debugInfo.time_of_day} (${debugInfo.time_source})</div>
                     `;
                 } catch (e) {
                     console.error('Failed to render debug:', e);
@@ -289,12 +292,12 @@ async function checkPhotoContext() {
     try {
         const now = Date.now();
         const cacheAge = now - cached.timestamp;
-        const twentyMinutes = 20 * 60 * 1000; // 20 minutes
+        const twentyNineMinutes = 29 * 60 * 1000; // 29 minutes
         const thirtyMinutes = 30 * 60 * 1000; // 30 minutes
         
-        // At 20 minutes (10 mins before expiry), prefetch the next photo
-        if (cacheAge >= twentyMinutes && cacheAge < thirtyMinutes && !prefetchedPhoto) {
-            console.log('Cache at 20min, prefetching next photo...');
+        // At 29 minutes (1 min before expiry), prefetch the next photo
+        if (cacheAge >= twentyNineMinutes && cacheAge < thirtyMinutes && !prefetchedPhoto) {
+            console.log('Cache at 29min, prefetching next photo...');
             await prefetchNextPhoto();
         }
         
