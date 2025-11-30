@@ -49,7 +49,6 @@ body {
 	background: var(--card-bg);
 	font-size: var(--card-font-size);
 	display: grid;
-	place-items: center;
 	gap: .6rem;
 }
 
@@ -209,4 +208,8 @@ body {
 
 a {
 	color: var(--muted);
+}
+
+* {
+	user-select: none;
 }

@@ -138,19 +138,9 @@ pub struct PrecipitationDisplay {
 }
 
 #[derive(Debug, Serialize)]
-pub struct NightOverlayResult {
-    pub should_apply: bool,
-    pub time_of_day: String,
-}
-
-#[derive(Debug, Serialize)]
 pub struct DebugInfo {
     pub photo_age: String,
     pub query: String,
-    pub next_dawn: String,
-    pub next_day: String,
-    pub next_dusk: String,
-    pub next_night: String,
 }
 
 #[tauri::command]
@@ -293,12 +283,14 @@ fn get_time_of_day(sunrise_iso: Option<String>, sunset_iso: Option<String>) -> T
 #[tauri::command]
 fn build_photo_query(
     cloudcover: f64,
+    rain: f64,
+    snowfall: f64,
     sunrise_iso: Option<String>,
     sunset_iso: Option<String>,
 ) -> PhotoQuery {
     let mut parts = Vec::new();
     
-    // Holiday or season
+    // Always add holiday/season as base
     let holiday = get_holiday();
     if let Some(h) = holiday.holiday {
         parts.push(h);
@@ -307,24 +299,29 @@ fn build_photo_query(
         parts.push(season.season);
     }
     
-    // Cloudiness
-    let is_very_cloudy = cloudcover >= 70.0;
-    if is_very_cloudy {
-        parts.push("overcast".to_string());
-    }
-    
     // Time of day
     let tod = get_time_of_day(sunrise_iso, sunset_iso);
     match tod.time_of_day.as_str() {
         "night" => parts.push("night dark".to_string()),
         "dawn" => parts.push("sunrise soft light".to_string()),
         "dusk" => parts.push("sunset warm".to_string()),
-        "day" => {
-            if is_very_cloudy {
-                parts.push("day cloudy".to_string());
-            }
-        }
+        "day" => {}, // Don't add anything for day
         _ => {}
+    }
+    
+    // Cloudiness
+    let is_very_cloudy = cloudcover >= 70.0;
+    if is_very_cloudy {
+        parts.push("overcast".to_string());
+    }
+    
+    // Precipitation (adds to existing terms, doesn't replace)
+    if snowfall > 0.0 {
+        parts.push("snow".to_string());
+        parts.push("cozy".to_string());
+    } else if rain > 0.0 {
+        parts.push("rain".to_string());
+        parts.push("cozy".to_string());
     }
     
     PhotoQuery {
@@ -455,16 +452,6 @@ fn get_precipitation_display(weather: WeatherData) -> PrecipitationDisplay {
 }
 
 #[tauri::command]
-fn should_apply_night_overlay(sunrise_iso: String, sunset_iso: String) -> NightOverlayResult {
-    let tod = get_time_of_day(Some(sunrise_iso), Some(sunset_iso));
-    
-    NightOverlayResult {
-        should_apply: tod.time_of_day == "night",
-        time_of_day: tod.time_of_day,
-    }
-}
-
-#[tauri::command]
 fn is_cache_valid(cache_timestamp: u64) -> bool {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -501,8 +488,6 @@ fn format_time_remaining(milliseconds: i64) -> String {
 fn get_debug_info(
     cache_timestamp: Option<u64>,
     query: Option<String>,
-    sunrise_iso: Option<String>,
-    sunset_iso: Option<String>,
 ) -> DebugInfo {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -532,53 +517,9 @@ fn get_debug_info(
     
     let query_str = query.unwrap_or_else(|| "n/a".to_string());
     
-    // Calculate next transition times
-    let (next_dawn, next_day, next_dusk, next_night) = if let (Some(sunrise), Some(sunset)) = (sunrise_iso, sunset_iso) {
-        if let (Ok(sunrise_dt), Ok(sunset_dt)) = (
-            DateTime::parse_from_rfc3339(&sunrise),
-            DateTime::parse_from_rfc3339(&sunset),
-        ) {
-            let now_utc = Utc::now();
-            let one_hour = chrono::Duration::hours(1).num_milliseconds();
-            let one_day = chrono::Duration::days(1).num_milliseconds();
-            
-            let sunrise_ts = sunrise_dt.timestamp_millis();
-            let sunset_ts = sunset_dt.timestamp_millis();
-            let now_ts = now_utc.timestamp_millis();
-            
-            let pick_next = |ts: i64| -> i64 {
-                if ts > now_ts {
-                    ts
-                } else {
-                    ts + one_day
-                }
-            };
-            
-            let dawn_ts = pick_next(sunrise_ts - one_hour);
-            let day_ts = pick_next(sunrise_ts + one_hour);
-            let dusk_ts = pick_next(sunset_ts - one_hour);
-            let night_ts = pick_next(sunset_ts + one_hour);
-            
-            (
-                format_time_remaining(dawn_ts - now_ts),
-                format_time_remaining(day_ts - now_ts),
-                format_time_remaining(dusk_ts - now_ts),
-                format_time_remaining(night_ts - now_ts),
-            )
-        } else {
-            ("n/a".to_string(), "n/a".to_string(), "n/a".to_string(), "n/a".to_string())
-        }
-    } else {
-        ("n/a".to_string(), "n/a".to_string(), "n/a".to_string(), "n/a".to_string())
-    };
-    
     DebugInfo {
         photo_age,
         query: query_str,
-        next_dawn,
-        next_day,
-        next_dusk,
-        next_night,
     }
 }
 
@@ -601,7 +542,6 @@ pub fn run() {
             build_photo_query,
             get_current_time,
             get_precipitation_display,
-            should_apply_night_overlay,
             is_cache_valid,
             format_time_remaining,
             get_debug_info,

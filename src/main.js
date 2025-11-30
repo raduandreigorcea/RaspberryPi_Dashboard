@@ -7,7 +7,7 @@ let SHOW_DEBUG = true;
 let currentWeather = null;
 let currentPhotoUrl = null;
 let debugInterval = null;
-let nightOverlayInterval = null;
+let prefetchedPhoto = null; // Store prefetched photo
 
 // Update weather display
 function updateWeatherDisplay(weather) {
@@ -97,27 +97,6 @@ async function updateTimeAndDate() {
     }
 }
 
-// Apply night overlay
-async function applyNightOverlay() {
-    if (!currentPhotoUrl || !currentWeather) return;
-    
-    try {
-        const result = await invoke('should_apply_night_overlay', {
-            sunriseIso: currentWeather.sunrise,
-            sunsetIso: currentWeather.sunset
-        });
-        
-        if (result.should_apply) {
-            const gradient = 'linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3))';
-            document.body.style.backgroundImage = `${gradient}, url('${currentPhotoUrl}')`;
-        } else {
-            document.body.style.backgroundImage = `url('${currentPhotoUrl}')`;
-        }
-    } catch (e) {
-        console.error('Failed to apply night overlay:', e);
-    }
-}
-
 // Cache helpers
 function getCachedPhoto() {
     try {
@@ -139,10 +118,12 @@ function cachePhoto(photo, query) {
 // Display photo
 async function displayPhoto(photo, timestamp = null, query = null) {
     currentPhotoUrl = photo.url;
+    
+    // Apply background image
+    document.body.style.backgroundImage = `url('${photo.url}')`;
     document.body.style.backgroundSize = 'cover';
     document.body.style.backgroundRepeat = 'no-repeat';
     document.body.style.backgroundPosition = 'center';
-    await applyNightOverlay();
     
     // Display photo credit
     let creditElement = document.getElementById('photo-credit');
@@ -155,7 +136,6 @@ async function displayPhoto(photo, timestamp = null, query = null) {
 
     // Clear previous intervals
     if (debugInterval) clearInterval(debugInterval);
-    if (nightOverlayInterval) clearInterval(nightOverlayInterval);
 
     // Trigger Unsplash download endpoint
     if (photo.download_location) {
@@ -174,9 +154,10 @@ async function displayPhoto(photo, timestamp = null, query = null) {
             
             const renderDebug = async () => {
                 try {
+                    const cached = getCachedPhoto();
                     const debugInfo = await invoke('get_debug_info', {
-                        cacheTimestamp: timestamp || getCachedPhoto()?.timestamp,
-                        query: query || getCachedPhoto()?.query
+                        cacheTimestamp: cached?.timestamp,
+                        query: cached?.query
                     });
                     
                     debugEl.innerHTML = `
@@ -195,9 +176,6 @@ async function displayPhoto(photo, timestamp = null, query = null) {
         const debugEl = document.getElementById('debug');
         if (debugEl) debugEl.style.display = 'none';
     }
-
-    // Refresh night overlay every minute
-    nightOverlayInterval = setInterval(applyNightOverlay, 60 * 1000);
 }
 
 // Fetch Unsplash photo
@@ -223,11 +201,23 @@ async function fetchUnsplashPhoto(forceRefresh = false) {
             return;
         }
         
+        // If we have a prefetched photo ready, use it immediately
+        if (prefetchedPhoto && !forceRefresh) {
+            console.log('Using prefetched photo');
+            const nowTs = Date.now();
+            cachePhoto(prefetchedPhoto.photo, prefetchedPhoto.query);
+            await displayPhoto(prefetchedPhoto.photo, nowTs, prefetchedPhoto.query);
+            prefetchedPhoto = null; // Clear prefetch
+            return;
+        }
+        
         console.log('Fetching new photo from Unsplash...');
         
-        // Build query using Rust backend
+        // Build query using Rust backend with weather data
         const queryResult = await invoke('build_photo_query', {
             cloudcover: currentWeather.cloudcover,
+            rain: currentWeather.rain,
+            snowfall: currentWeather.snowfall,
             sunriseIso: currentWeather.sunrise,
             sunsetIso: currentWeather.sunset
         });
@@ -258,19 +248,64 @@ async function fetchUnsplashPhoto(forceRefresh = false) {
     }
 }
 
+// Prefetch next photo in background (doesn't display it)
+async function prefetchNextPhoto() {
+    if (!currentWeather) return;
+    
+    try {
+        console.log('Prefetching next photo in background...');
+        
+        const queryResult = await invoke('build_photo_query', {
+            cloudcover: currentWeather.cloudcover,
+            rain: currentWeather.rain,
+            snowfall: currentWeather.snowfall,
+            sunriseIso: currentWeather.sunrise,
+            sunsetIso: currentWeather.sunset
+        });
+        
+        const photo = await invoke('get_unsplash_photo', { 
+            width: window.innerWidth, 
+            height: window.innerHeight,
+            query: queryResult.query
+        });
+        
+        // Store for later use
+        prefetchedPhoto = {
+            photo: photo,
+            query: queryResult.query
+        };
+        
+        console.log('Photo prefetched successfully (ready to display)');
+    } catch (error) {
+        console.error('Failed to prefetch photo:', error);
+    }
+}
+
 // Check if photo context has changed
 async function checkPhotoContext() {
     const cached = getCachedPhoto();
     if (!cached) return;
     
     try {
+        const now = Date.now();
+        const cacheAge = now - cached.timestamp;
+        const twentyMinutes = 20 * 60 * 1000; // 20 minutes
+        const thirtyMinutes = 30 * 60 * 1000; // 30 minutes
+        
+        // At 20 minutes (10 mins before expiry), prefetch the next photo
+        if (cacheAge >= twentyMinutes && cacheAge < thirtyMinutes && !prefetchedPhoto) {
+            console.log('Cache at 20min, prefetching next photo...');
+            await prefetchNextPhoto();
+        }
+        
+        // At 30 minutes, switch to the prefetched photo (or fetch if prefetch failed)
         const isValid = await invoke('is_cache_valid', { 
             cacheTimestamp: cached.timestamp 
         });
         
         if (!isValid) {
-            console.log('Photo context changed, fetching new photo...');
-            await fetchUnsplashPhoto();
+            console.log('Cache expired (30min), switching to new photo...');
+            await fetchUnsplashPhoto(true); // Will use prefetched if available
         }
     } catch (error) {
         console.error('Failed to check photo context:', error);
