@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use chrono::{Datelike, Local, Timelike};
 use std::time::{SystemTime, UNIX_EPOCH};
+use rand::seq::IndexedRandom;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -248,10 +249,11 @@ fn get_time_of_day(sunrise_iso: Option<String>, sunset_iso: Option<String>) -> T
             let now_local = Local::now().naive_local();
             let one_hour = chrono::Duration::hours(1);
             
-            let dawn_start = sunrise - one_hour;
-            let dawn_end = sunrise + one_hour;
-            let dusk_start = sunset - one_hour;
-            let dusk_end = sunset + one_hour;
+            // Use checked_sub to avoid overflow
+            let dawn_start = sunrise.checked_sub_signed(one_hour).unwrap_or(sunrise);
+            let dawn_end = sunrise.checked_add_signed(one_hour).unwrap_or(sunrise);
+            let dusk_start = sunset.checked_sub_signed(one_hour).unwrap_or(sunset);
+            let dusk_end = sunset.checked_add_signed(one_hour).unwrap_or(sunset);
             
             let time_of_day = if now_local >= dawn_start && now_local < dawn_end {
                 "dawn"
@@ -286,39 +288,101 @@ fn build_photo_query(
     sunset_iso: Option<String>,
 ) -> PhotoQuery {
     let mut parts = Vec::new();
+    let mut rng = rand::rng();
     
-    // Always add holiday/season as base
+    // Check for holiday first
     let holiday = get_holiday();
+    
     if let Some(h) = holiday.holiday {
-        parts.push(h);
+        // For each holiday, use specific festive imagery with random variety
+        match h.as_str() {
+            "christmas" => {
+                parts.push("christmas".to_string());
+                // Pick 2 random terms from Christmas options
+                let christmas_terms: &[&str] = &[
+                    "decorated", "tree", "lights", "fireplace", "cozy", 
+                    "festive", "ornaments", "wreath", "gift", "warm"
+                ];
+                let selected: Vec<_> = christmas_terms
+                    .choose_multiple(&mut rng, 2)
+                    .collect();
+                for term in selected {
+                    parts.push(term.to_string());
+                }
+            },
+            "new year" => {
+                parts.push("new year".to_string());
+                // Pick 2 random terms from New Year options
+                let new_year_terms: &[&str] = &[
+                    "celebration", "fireworks", "champagne", "festive",
+                    "party", "countdown", "sparkle", "midnight"
+                ];
+                let selected: Vec<_> = new_year_terms
+                    .choose_multiple(&mut rng, 2)
+                    .collect();
+                for term in selected {
+                    parts.push(term.to_string());
+                }
+            },
+            "halloween" => {
+                parts.push("halloween".to_string());
+                // Pick 2 random terms from Halloween options
+                let halloween_terms: &[&str] = &[
+                    "spooky", "pumpkin", "haunted", "autumn",
+                    "witch", "ghost", "candle", "dark", "mysterious"
+                ];
+                let selected: Vec<_> = halloween_terms
+                    .choose_multiple(&mut rng, 2)
+                    .collect();
+                for term in selected {
+                    parts.push(term.to_string());
+                }
+            },
+            "easter" => {
+                parts.push("easter".to_string());
+                // Pick 2 random terms from Easter options
+                let easter_terms: &[&str] = &[
+                    "spring", "colorful", "flowers", "pastel",
+                    "bunny", "eggs", "garden", "bloom", "bright"
+                ];
+                let selected: Vec<_> = easter_terms
+                    .choose_multiple(&mut rng, 2)
+                    .collect();
+                for term in selected {
+                    parts.push(term.to_string());
+                }
+            },
+            _ => parts.push(h),
+        }
     } else {
+        // Only add season if not a holiday
         let season = get_season();
         parts.push(season.season);
     }
     
-    // Time of day
+    // Time of day (for everyone)
     let tod = get_time_of_day(sunrise_iso, sunset_iso);
     match tod.time_of_day.as_str() {
-        "night" => parts.push("night dark".to_string()),
-        "dawn" => parts.push("sunrise soft light".to_string()),
-        "dusk" => parts.push("sunset warm".to_string()),
+        "night" => parts.push("night".to_string()),
+        "dawn" => parts.push("dawn".to_string()),
+        "dusk" => parts.push("dusk".to_string()),
         "day" => {}, // Don't add anything for day
         _ => {}
     }
     
-    // Cloudiness
-    let is_very_cloudy = cloudcover >= 70.0;
-    if is_very_cloudy {
-        parts.push("overcast".to_string());
-    }
-    
-    // Precipitation (adds to existing terms, doesn't replace)
+    // Precipitation (adds to existing terms)
     if snowfall > 0.0 {
         parts.push("snow".to_string());
-        parts.push("cozy".to_string());
     } else if rain > 0.0 {
         parts.push("rain".to_string());
-        parts.push("cozy".to_string());
+    }
+    
+    // Cloudiness (only if very cloudy and no precipitation)
+    if snowfall == 0.0 && rain == 0.0 {
+        let is_very_cloudy = cloudcover >= 70.0;
+        if is_very_cloudy {
+            parts.push("cloudy".to_string());
+        }
     }
     
     PhotoQuery {
@@ -455,7 +519,8 @@ fn is_cache_valid(cache_timestamp: u64) -> bool {
         .unwrap()
         .as_millis() as u64;
     
-    let cache_age = now - cache_timestamp;
+    // Use saturating_sub to avoid overflow
+    let cache_age = now.saturating_sub(cache_timestamp);
     let thirty_minutes = 30 * 60 * 1000;
     
     cache_age < thirty_minutes
@@ -494,7 +559,10 @@ fn get_debug_info(
         .as_millis() as u64;
     
     let photo_age = if let Some(ts) = cache_timestamp {
-        let seconds = (now - ts) / 1000;
+        // Use saturating_sub to avoid overflow if timestamp is in the future
+        let diff = now.saturating_sub(ts);
+        let seconds = diff / 1000;
+        
         if seconds < 60 {
             format!("{}s ago", seconds)
         } else {
