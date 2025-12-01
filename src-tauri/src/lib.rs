@@ -499,7 +499,7 @@ fn get_precipitation_display(weather: WeatherData) -> PrecipitationDisplay {
         }
     } else if weather.rain > 0.0 {
         PrecipitationDisplay {
-            icon: "droplet.svg".to_string(),
+            icon: "droplets.svg".to_string(),
             label: "Rain".to_string(),
             value: format!("{} mm", weather.rain),
         }
